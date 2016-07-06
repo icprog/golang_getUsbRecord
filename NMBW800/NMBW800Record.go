@@ -1,4 +1,4 @@
-package main
+﻿package main
 
 import (
 	"bufio"
@@ -85,7 +85,9 @@ type History struct {
 	Date     string //时标，从1970-01-01 00:00:00到现在的秒数，时标为0或者0xffffffff为无效,原始数值为uint32
 	Amount   uint16 //可以吃的总量
 	Actual   uint16 //实际吃的数量
-	Sum      uint32 //校验，校验不正确，记录无效
+	PN1      byte
+	PN2      byte
+	Sum      byte   //校验，校验不正确，记录无效
 	IsEffect string //根据前面的数据判断是否为有效记录
 }
 
@@ -102,7 +104,9 @@ func (h *History) reflashValue(b []byte) {
 
 	h.Amount = Twobyte_to_uint16(b[9], b[8])
 	h.Actual = Twobyte_to_uint16(b[11], b[10])
-	h.Sum = Fourbyte_to_uint32(b[15], b[14], b[13], b[12])
+	h.PN1 = b[12]
+	h.PN2 = b[13]
+	h.Sum = b[15]
 	//时间为ffffffff 和0都是无效的记录
 	if b[7] == 0xff && b[6] == 0xff && b[5] == 0xff && b[4] == 0xff {
 		h.IsEffect = "无效记录：时间段错误"
@@ -113,11 +117,11 @@ func (h *History) reflashValue(b []byte) {
 		return
 	}
 	//因为校验和为uint32所以全部转为uint32,将每一个字节转换为转换为uint32
-	var sumNum uint32 //传人字节数组的0-11的校验和
-	for i := 0; i < 12; i++ {
-		sumNum = sumNum + uint32(b[i])
+	var sumNum byte //传人字节数组的0-11的校验和
+	for i := 0; i < 14; i++ {
+		sumNum = sumNum + b[i]
 	}
-	if sumNum != uint32(h.Sum) {
+	if sumNum != h.Sum {
 		h.IsEffect = "无效记录：和校验错误"
 		return
 	}
